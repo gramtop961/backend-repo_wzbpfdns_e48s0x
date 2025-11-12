@@ -2,7 +2,7 @@ import os
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from bson import ObjectId
 import stripe
 
@@ -22,6 +22,28 @@ app.add_middleware(
 STRIPE_SECRET = os.getenv("STRIPE_SECRET_KEY", "")
 if STRIPE_SECRET:
     stripe.api_key = STRIPE_SECRET
+
+# --- Auth ---
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "woodenmart@gmail.com")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "woodenmart@1")
+
+class AuthRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class AuthResponse(BaseModel):
+    token: str
+    role: str
+    email: EmailStr
+
+# NOTE: Simple demo auth (no JWT). Returns a static token if credentials match.
+@app.post("/auth/login", response_model=AuthResponse)
+def login(req: AuthRequest):
+    if req.email.lower() == ADMIN_EMAIL.lower() and req.password == ADMIN_PASSWORD:
+        return AuthResponse(token="admin-token", role="admin", email=req.email)
+    # Could extend with seller/user auth later
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
 
 class ProductCreate(Product):
     pass
@@ -118,9 +140,9 @@ def checkout(req: CheckoutRequest):
             qty = int(it.get("quantity", 1))
             line_items.append({
                 "price_data": {
-                    "currency": prod.get("currency", "usd"),
+                    "currency": prod.get("currency", "inr"),
                     "product_data": {"name": prod.get("title", "Item")},
-                    # Stripe expects amount in cents
+                    # Stripe expects amount in smallest unit (paise)
                     "unit_amount": int(float(prod.get("price", 0)) * 100)
                 },
                 "quantity": qty

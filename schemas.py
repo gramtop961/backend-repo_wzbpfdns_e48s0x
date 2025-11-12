@@ -14,8 +14,8 @@ class Category(BaseModel):
 class Product(BaseModel):
     title: str = Field(..., description="Product title")
     description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in cents/dollars depending on currency")
-    currency: str = Field("usd", description="ISO currency code")
+    price: float = Field(..., ge=0, description="Price in base currency")
+    currency: str = Field("inr", description="ISO currency code, default INR")
     images: List[str] = Field(default_factory=list, description="Image URLs")
     category: Optional[str] = Field(None, description="Category slug")
     stock: int = Field(0, ge=0, description="Units in stock")
@@ -36,7 +36,7 @@ class Order(BaseModel):
     user_email: EmailStr
     items: List[OrderItem]
     total: float
-    currency: str = "usd"
+    currency: str = "inr"
     status: str = Field("pending", description="pending, paid, failed, cancelled, shipped")
     payment_intent_id: Optional[str] = None
 
